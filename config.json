@@ -1,0 +1,12 @@
+{
+  "port": 13578,
+  "projects": {
+    "test": "C:/tornado-git-server/test"
+  },
+  "users": {
+    "r1": {
+      "password": "r1",
+      "projects": ["test"]
+    }
+  }
+}
