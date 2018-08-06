@@ -8,21 +8,22 @@ import base64
 from typing import Dict
 
 
-CONFIG: 'Config' = None
+CONFIG: 'Config' = None  # global variable for 'Config' instance
+CURDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
-    FILEPATH = './config.json'
+    FILEPATH = os.path.join(CURDIR, './config.json')
     port: int
     _projects: Dict[str, str]
     _users: Dict[str, dict]
     _lastmtime = 0
 
     def __init__(self):
-        data = self._refresh()
-        self.port = data['port']
+        self.refresh()
 
-    def _refresh(self):
+    def refresh(self):
+        """reload data from config if config was modified"""
         file_lastmtime = os.path.getmtime(self.FILEPATH)
         if self._lastmtime == file_lastmtime:
             return None
@@ -31,62 +32,59 @@ class Config:
             data = json.load(e)
         self._projects = data['projects']
         self._users = data['users']
-        return data
+        self.port = data['port']
 
     def get_project_path(self, project_name):
-        return os.path.abspath(self._projects[project_name])
+        """returns absolute path even if in config specified relative"""
+        if os.path.isabs(self._projects[project_name]):
+            return self._projects[project_name]
+        return os.path.join(CURDIR, self._projects[project_name])
 
-    def check_user_permission(self, user, password, project, is_refreshed=False):
+    def check_user_permission(self, user, password, project):
         try:
             user_config = self._users[user]
             user_config['projects'].index(project)
-            if user_config["password"] != password:
-                raise ValueError
-            return True
         except (KeyError, ValueError):
-            if is_refreshed:
-                return False
-            self._refresh()
-            self.check_user_permission(user, password, project, True)
+            return False
+        if user_config["password"] != password:
+            return False
+        return True
 
     def has_project(self, project_name):
-        if project_name not in self._projects.keys():
-            self._refresh()
-            return project_name in self._projects.keys()
-        return True
+        return project_name in self._projects.keys()
 
 
 class BaseGitHandler(tornado.web.RequestHandler):
+    """
+    Abstract base class for other requestHandlers.
+    Implements basic authorization.
+    """
     project_name: str
 
     def data_received(self, chunk):
-        """just to suppress annoying abstract-class inspection, method is unused"""
+        # just to suppress annoying abstract-class inspection, method is unused
         raise RuntimeError("Not Implemented Method")
 
-    def _check_auth(self, kwargs):
+    def _request_auth(self):
+        self.set_status(401)
+        self.set_header('WWW-Authenticate', 'Basic realm=Restricted')
+        self._transforms = []
+        self.finish()
+
+    def _execute(self, transforms, *args, **kwargs):
+        """Check project and authentification"""
+        self.project_name = str(args[0], 'utf-8')
+        CONFIG.refresh()
+        if not CONFIG.has_project(self.project_name):
+            raise tornado.web.HTTPError(404)
         auth_header = self.request.headers.get('Authorization')
         if auth_header is None or not auth_header.startswith('Basic '):
-            self.set_status(401)
-            self.set_header('WWW-Authenticate', 'Basic realm=Restricted')
-            self._transforms = []
-            self.finish()
-            return False
+            self._request_auth()
         auth_decoded = str(base64.b64decode(auth_header[6:]), 'utf-8')
         kwargs['auth_user'], kwargs['auth_pass'] = auth_decoded.split(':', 2)
         if not CONFIG.check_user_permission(kwargs['auth_user'], kwargs['auth_pass'], self.project_name):
-            raise tornado.web.HTTPError(401)
-        return True
-
-    def _execute(self, transforms, *args, **kwargs):
-        self.project_name = str(args[0], 'utf-8')
-        if not self._check_auth(kwargs):
-            return False
+            self._request_auth()
         return super()._execute(transforms, *args, **kwargs)
-
-    def prepare(self):
-        if not CONFIG.has_project(self.project_name):
-            raise tornado.web.HTTPError(404)
-        super().prepare()
 
     @property
     def _project_path(self):

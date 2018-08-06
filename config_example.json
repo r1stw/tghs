@@ -1,0 +1,15 @@
+{
+  "port": 5555,
+  "projects": {
+    "project1": "./project1",
+    "project2": "/home/usr/project2"
+  },
+  "users": {
+    "username": {
+      "password": "some_password",
+      "projects": [
+        "project1", "project2"
+      ]
+    }
+  }
+}
