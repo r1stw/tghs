@@ -40,15 +40,11 @@ class Config:
             return self._projects[project_name]
         return os.path.join(CURDIR, self._projects[project_name])
 
-    def check_user_permission(self, user, password, project):
+    def check_user_permission(self, user, password):
         try:
-            user_config = self._users[user]
-            user_config['projects'].index(project)
-        except (KeyError, ValueError):
+            return self._users[user] == password
+        except KeyError:
             return False
-        if user_config["password"] != password:
-            return False
-        return True
 
     def has_project(self, project_name):
         return project_name in self._projects.keys()
@@ -82,7 +78,7 @@ class BaseGitHandler(tornado.web.RequestHandler):
             self._request_auth()
         auth_decoded = str(base64.b64decode(auth_header[6:]), 'utf-8')
         kwargs['auth_user'], kwargs['auth_pass'] = auth_decoded.split(':', 2)
-        if not CONFIG.check_user_permission(kwargs['auth_user'], kwargs['auth_pass'], self.project_name):
+        if not CONFIG.check_user_permission(kwargs['auth_user'], kwargs['auth_pass']):
             self._request_auth()
         return super()._execute(transforms, *args, **kwargs)
 

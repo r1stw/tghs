@@ -5,11 +5,7 @@
     "project2": "/home/usr/project2"
   },
   "users": {
-    "username": {
-      "password": "some_password",
-      "projects": [
-        "project1", "project2"
-      ]
+    "username": "some_password"
     }
   }
 }
