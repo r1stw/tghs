@@ -38,7 +38,6 @@ ubuntu 16.04
         },
         "users": {
           "username": "qwertypass"
-          }
         }
       }
      ```
