@@ -76,10 +76,12 @@ class BaseGitHandler(tornado.web.RequestHandler):
         auth_header = self.request.headers.get('Authorization')
         if auth_header is None or not auth_header.startswith('Basic '):
             self._request_auth()
+            return
         auth_decoded = str(base64.b64decode(auth_header[6:]), 'utf-8')
         kwargs['auth_user'], kwargs['auth_pass'] = auth_decoded.split(':', 2)
         if not CONFIG.check_user_permission(kwargs['auth_user'], kwargs['auth_pass']):
             self._request_auth()
+            return
         return super()._execute(transforms, *args, **kwargs)
 
     @property
