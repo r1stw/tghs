@@ -13,34 +13,27 @@ ubuntu 16.04
 ```
 ## installation
 1. Clone
-2. Create `config.json` (example -- `config_example.json`)
-3. Write in config:
-   - port for server
-   - add repositories data to `projects`: 
-   
-     `"repo_name": "path_to_repo"` per your project (where "path_to_repo" is absolute or relative from tornado-git-http-server folder)
+2. Create `config.json` (example -- `config_example.json`):
+   - specify port
+   - add repositories data: 
      
-     Folder `/repos/` is already gitignored, so you can put projects there.
-   - add users data to `users`: 
-   
-     `"username": "password"` per user.
-   
-     Auth scheme is very simple: all users will have access to all projects.
-     
-   - Example of `config.py`:
-   
      ```
-     {
-        "port": 5555,
-        "projects": {
+     "projects": {
           "project1": "./repos/project1",
           "project2": "/home/user/project2"
         },
-        "users": {
-          "username": "qwertypass"
-        }
-      }
      ```
      
-   - Server automatically reloads data from config everytime when it modified. No restart is needed.
+     Folder `/repos/` is already gitignored, so you can put projects there.
+   - add users data 
+   
+     ```
+     "users": {
+          "username": "qwertypass"
+        }
+     ```
+   
+     Auth scheme is very simple: all users will have access to all projects.
+    
+    _Server will automatically checks for config updates on each request. So, you can modify data without restart._
 4. run tghs.py
