@@ -26,7 +26,7 @@ class Config:
         """reload data from config if config was modified"""
         file_lastmtime = os.path.getmtime(self.FILEPATH)
         if self._lastmtime == file_lastmtime:
-            return None
+            return
         self._lastmtime = file_lastmtime
         with open(self.FILEPATH, mode='r', encoding='utf-8') as e:
             data = json.load(e)
@@ -34,13 +34,13 @@ class Config:
         self._users = data['users']
         self.port = data['port']
 
-    def get_project_path(self, project_name):
+    def get_project_path(self, project_name) -> str:
         """returns absolute path even if in config specified relative"""
         if os.path.isabs(self._projects[project_name]):
             return self._projects[project_name]
         return os.path.join(CURDIR, self._projects[project_name])
 
-    def check_user_permission(self, user, password):
+    def check_user_permission(self, user, password) -> bool:
         try:
             return self._users[user] == password
         except KeyError:
@@ -85,7 +85,7 @@ class BaseGitHandler(tornado.web.RequestHandler):
         return super()._execute(transforms, *args, **kwargs)
 
     @property
-    def _project_path(self):
+    def _project_path(self) -> str:
         return CONFIG.get_project_path(self.project_name)
 
 
