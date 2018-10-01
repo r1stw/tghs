@@ -15,9 +15,7 @@ ubuntu 16.04
 
 
 ## py requirements
-```pip3 install tornado==5.1```
-
-Tornado v.4.4.1 also works.
+```tornado >=4.4.1,<=5.5.1```
 
 
 
