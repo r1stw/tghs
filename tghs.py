@@ -1,11 +1,12 @@
 import os
 import json
-import subprocess
 import tornado.ioloop
 import tornado.web
 import base64
 
 from typing import Dict
+from tornado.process import Subprocess
+from subprocess import PIPE, STDOUT
 
 
 CONFIG: 'Config' = None  # global variable for 'Config' instance
@@ -90,17 +91,20 @@ class BaseGitHandler(tornado.web.RequestHandler):
 
 
 class GitInfoHandler(BaseGitHandler):
-    def get(self, *args, **kwargs):
+    async def get(self, *args, **kwargs):
         service = self.get_argument('service')
         if service[:4] != 'git-':
             raise tornado.web.HTTPError(501)
-        proc = subprocess.Popen(
+        proc = Subprocess(
             [service, '--stateless-rpc', '--advertise-refs', self._project_path],
-            stdout=subprocess.PIPE)
+            stdin=PIPE, stdout=PIPE)
+        proc.stdin.close()
+        await proc.wait_for_exit()
+        stdr = proc.stdout.read()
         packet = f'# service={service}\n'
         length = len(packet) + 4
         prefix = '{:04x}'.format(length & 0xFFFF)
-        data = ''.join((prefix, packet, '0000', str(proc.stdout.read(), 'utf-8')))
+        data = ''.join((prefix, packet, '0000', str(stdr, 'utf-8')))
         self.set_header('Expires', 'Fri, 01 Jan 1980 00:00:00 GMT')
         self.set_header('Cache-Control', 'no-cache, max-age=0, must-revalidate')
         self.set_header('Content-Type', f'application/x-{service}-advertisement')
@@ -108,27 +112,33 @@ class GitInfoHandler(BaseGitHandler):
 
 
 class GitReceiveHandler(BaseGitHandler):
-    def post(self, *args, **kwargs):
-        proc = subprocess.Popen(
+    async def post(self, *args, **kwargs):
+        proc = Subprocess(
             ['git-receive-pack', '--stateless-rpc', self._project_path],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        result, _ = proc.communicate(self.request.body)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        proc.stdin.write(self.request.body)
+        proc.stdin.close()
+        await proc.wait_for_exit()
+        stdr = proc.stdout.read()
         self.set_header('Expires', 'Fri, 01 Jan 1980 00:00:00 GMT')
         self.set_header('Cache-Control', 'no-cache, max-age=0, must-revalidate')
         self.set_header('Content-Type', f'application/x-git-receive-pack-advertisement')
-        self.finish(result)
+        self.finish(stdr)
 
 
 class GitUploadHandler(BaseGitHandler):
-    def post(self, *args, **kwargs):
-        proc = subprocess.Popen(
+    async def post(self, *args, **kwargs):
+        proc = Subprocess(
             ['git-upload-pack', '--stateless-rpc', self._project_path],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        result, _ = proc.communicate(self.request.body)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        proc.stdin.write(self.request.body)
+        proc.stdin.close()
+        await proc.wait_for_exit()
+        stdr = proc.stdout.read()
         self.set_header('Expires', 'Fri, 01 Jan 1980 00:00:00 GMT')
         self.set_header('Cache-Control', 'no-cache, max-age=0, must-revalidate')
         self.set_header('Content-Type', f'application/x-git-upload-pack-advertisement')
-        self.finish(result)
+        self.finish(stdr)
 
 
 if __name__ == "__main__":
