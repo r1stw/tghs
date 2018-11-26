@@ -6,6 +6,7 @@ import base64
 
 from typing import Dict
 from tornado.process import Subprocess
+from tornado.gen import multi
 from subprocess import PIPE, STDOUT
 
 
@@ -97,10 +98,11 @@ class GitInfoHandler(BaseGitHandler):
             raise tornado.web.HTTPError(501)
         proc = Subprocess(
             [service, '--stateless-rpc', '--advertise-refs', self._project_path],
-            stdin=PIPE, stdout=PIPE)
+            stdin=PIPE, stdout=Subprocess.STREAM)
         proc.stdin.close()
-        await proc.wait_for_exit()
-        stdr = proc.stdout.read()
+        retcode, stdr = await multi([
+            proc.wait_for_exit(raise_error=False),
+            proc.stdout.read_until_close()])
         packet = f'# service={service}\n'
         length = len(packet) + 4
         prefix = '{:04x}'.format(length & 0xFFFF)
@@ -115,11 +117,12 @@ class GitReceiveHandler(BaseGitHandler):
     async def post(self, *args, **kwargs):
         proc = Subprocess(
             ['git-receive-pack', '--stateless-rpc', self._project_path],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+            stdin=PIPE, stdout=Subprocess.STREAM, stderr=STDOUT)
         proc.stdin.write(self.request.body)
         proc.stdin.close()
-        await proc.wait_for_exit()
-        stdr = proc.stdout.read()
+        retcode, stdr = await multi([
+            proc.wait_for_exit(raise_error=False),
+            proc.stdout.read_until_close()])
         self.set_header('Expires', 'Fri, 01 Jan 1980 00:00:00 GMT')
         self.set_header('Cache-Control', 'no-cache, max-age=0, must-revalidate')
         self.set_header('Content-Type', f'application/x-git-receive-pack-advertisement')
@@ -130,15 +133,16 @@ class GitUploadHandler(BaseGitHandler):
     async def post(self, *args, **kwargs):
         proc = Subprocess(
             ['git-upload-pack', '--stateless-rpc', self._project_path],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+            stdin=PIPE, stdout=Subprocess.STREAM, stderr=STDOUT)
         proc.stdin.write(self.request.body)
         proc.stdin.close()
-        await proc.wait_for_exit()
-        stdr = proc.stdout.read()
+        retcode, result = await multi([
+            proc.wait_for_exit(raise_error=False),
+            proc.stdout.read_until_close()])
         self.set_header('Expires', 'Fri, 01 Jan 1980 00:00:00 GMT')
         self.set_header('Cache-Control', 'no-cache, max-age=0, must-revalidate')
         self.set_header('Content-Type', f'application/x-git-upload-pack-advertisement')
-        self.finish(stdr)
+        self.finish(result)
 
 
 if __name__ == "__main__":
