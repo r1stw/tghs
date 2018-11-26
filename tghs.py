@@ -14,7 +14,7 @@ CURDIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
-    FILEPATH = os.path.join(CURDIR, './config.json')
+    FILEPATH = os.path.normpath(os.path.join(CURDIR, './config.json'))
     port: int
     _projects: Dict[str, str]
     _users: Dict[str, dict]
@@ -39,7 +39,7 @@ class Config:
         """returns absolute path even if in config specified relative"""
         if os.path.isabs(self._projects[project_name]):
             return self._projects[project_name]
-        return os.path.join(CURDIR, self._projects[project_name])
+        return os.path.normpath(os.path.join(CURDIR, self._projects[project_name]))
 
     def check_user_permission(self, user, password) -> bool:
         try:
