@@ -98,7 +98,7 @@ class GitInfoHandler(BaseGitHandler):
             raise tornado.web.HTTPError(501)
         proc = Subprocess(
             [service, '--stateless-rpc', '--advertise-refs', self._project_path],
-            stdin=Subprocess.STREAM, stdout=Subprocess.STREAM)
+            stdin=PIPE, stdout=Subprocess.STREAM)
         proc.stdin.close()
         retcode, stdr = await multi([
             proc.wait_for_exit(raise_error=False),
@@ -117,7 +117,7 @@ class GitReceiveHandler(BaseGitHandler):
     async def post(self, *args, **kwargs):
         proc = Subprocess(
             ['git-receive-pack', '--stateless-rpc', self._project_path],
-            stdin=Subprocess.STREAM, stdout=Subprocess.STREAM, stderr=STDOUT)
+            stdin=PIPE, stdout=Subprocess.STREAM, stderr=STDOUT)
         proc.stdin.write(self.request.body)
         proc.stdin.close()
         retcode, stdr = await multi([
@@ -133,7 +133,7 @@ class GitUploadHandler(BaseGitHandler):
     async def post(self, *args, **kwargs):
         proc = Subprocess(
             ['git-upload-pack', '--stateless-rpc', self._project_path],
-            stdin=Subprocess.STREAM, stdout=Subprocess.STREAM, stderr=STDOUT)
+            stdin=PIPE, stdout=Subprocess.STREAM, stderr=STDOUT)
         proc.stdin.write(self.request.body)
         proc.stdin.close()
         retcode, result = await multi([
