@@ -152,5 +152,5 @@ if __name__ == "__main__":
         (r"/([^/]*)/git-receive-pack", GitReceiveHandler),
         (r"/([^/]*)/git-upload-pack", GitUploadHandler),
     ])
-    app.listen(CONFIG.port)
+    app.listen(CONFIG.port, decompress_request=True)
     tornado.ioloop.IOLoop.current().start()
