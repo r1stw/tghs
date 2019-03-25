@@ -7,7 +7,7 @@ OUTPUT="${DIR}/.logs/${DATE}.log"
 case "$1" in
   start)
       read pid < ${PATH_TO_PID}
-      if [[ ! -z "$pid" && ps -p "$pid" > /dev/null ]]
+      if [ ! -z "$pid" ] && [ ps -p "$pid" > /dev/null ]
       then
           echo "already running"
           exit 1
