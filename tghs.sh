@@ -12,7 +12,7 @@ case "$1" in
           echo "already running"
           exit 1
       fi
-      git -c ${DIR} pull
+      git -C ${DIR} pull
       python3.7 tghs.py $2 >> ${OUTPUT} 2>&1 & echo $! > ${PATH_TO_PID} &
     ;;
   stop)
@@ -23,7 +23,7 @@ case "$1" in
   restart)
       pkill -9 -P $(<"$PATH_TO_PID")
       kill -9 $(<"$PATH_TO_PID")
-      git -c ${DIR} pull
+      git -C ${DIR} pull
       python3.7 tghs.py $2 >> ${OUTPUT} 2>&1 & echo $! > ${PATH_TO_PID} &
     ;;
   *)
